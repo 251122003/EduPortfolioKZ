@@ -1,4 +1,4 @@
-# EduPortfolio KZ
+# EduPortfolioKZ
 
 A nationwide registry of diplomas and certificates from competitions and olympiads. Verified organizations enter results into a closed database; students get a personal profile where their awards appear automatically; universities verify authenticity through a QR code or a secure link.
 
@@ -44,8 +44,8 @@ React + TypeScript, Node.js (NestJS), PostgreSQL, Prisma, Docker. See [developme
 ## Quick start
 
 ```bash
-git clone https://github.com/251122003/ped-741---project/
-cd eduportfolio-kz
+git https://github.com/251122003/EduPortfolioKZ
+cd EduPortfolioKZ
 cp .env.example .env
 ```
 Code in progress

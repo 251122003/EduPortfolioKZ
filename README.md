@@ -1,60 +1,75 @@
-# EduPortfolioKZ
+# React + TypeScript + Vite
 
-A nationwide registry of diplomas and certificates from competitions and olympiads. Verified organizations enter results into a closed database; students get a personal profile where their awards appear automatically; universities verify authenticity through a QR code or a secure link.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
+Currently, two official plugins are available:
 
-## Problem
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
-Diplomas and certificates are scattered across paper folders and chats, are easy to forge, and universities have no quick way to check them. Students have no single place to show their achievements.
+## React Compiler
 
-## Solution
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-- **Organizations** register (verified by the project team) and enter participants and results.
-- **Students** register with IIN, full name and phone, confirm the phone by SMS code, and the system attaches all matching awards to their profile.
-- **Universities** open a student's shared portfolio via QR/link and see whether each award is authentic.
+## Expanding the ESLint configuration
 
-## Key features
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
-- Closed database: awards are not publicly searchable
-- Student profile with active diplomas and certificates
-- Matching by IIN + full name + phone, confirmed by SMS code
-- QR code and secure link with random token, expiry and revocation
-- Audit log of every change; awards are never deleted, only marked corrected or revoked
-- Two interface languages: Kazakh and Russian
+```js
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
 
-## Roles
+      // Remove tseslint.configs.recommended and replace with this
+      tseslint.configs.recommendedTypeChecked,
+      // Alternatively, use this for stricter rules
+      tseslint.configs.strictTypeChecked,
+      // Optionally, add this for stylistic rules
+      tseslint.configs.stylisticTypeChecked,
 
-| Role | What they do |
-|---|---|
-| Student | Registers, views awards, creates share links |
-| Organization | Enters and edits its own events and results |
-| Admin (project team) | Verifies organizations, approves global changes |
-| Verifier (university) | Opens a shared link, no account needed |
+      // Other configs...
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 
-## Tech stack
-
-React + TypeScript, Node.js (NestJS), PostgreSQL, Prisma, Docker. See [development.md](development.md).
-
-## Documentation
-
-- [specifications.md](specifications.md): requirements, data model, flows, security
-- [development.md](development.md): setup, structure, workflow, roadmap
-- [claude.md](claude.md): rules for AI coding assistants in this repo
-
-## Quick start
-
-```bash
-git https://github.com/251122003/EduPortfolioKZ
-cd EduPortfolioKZ
-cp .env.example .env
 ```
-Code in progress
 
-## Team
+You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
 
-- <Zhanel>: frontend
-- <Zhasmin>: backend
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
 
-## License
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 
-To be decided.
+```

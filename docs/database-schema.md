@@ -1,6 +1,6 @@
 # Database schema
 
-Project: EduPortfolio KZ | Course: PED 741 Software Development Practice | Deliverable 2 (tag `v0.2.0`)
+Project: EduPortfolio KZ 
 
 This document describes the PostgreSQL 16 schema of EduPortfolio KZ: the ERD, every table and column, relationship rules, and the reasoning behind the design. The executable version is [`prisma/schema.prisma`](../prisma/schema.prisma). Requirements come from [specifications.md](../specifications.md) (section 7 is the starting point; the changes made while normalizing are listed in section 6 below).
 

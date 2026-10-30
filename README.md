@@ -58,3 +58,26 @@ Code in progress
 ## License
 
 To be decided.
+
+## Database setup
+
+The schema is in [`prisma/schema.prisma`](prisma/schema.prisma). Design, ERD and justification: [`docs/database-schema.md`](docs/database-schema.md).
+
+Prerequisites: PostgreSQL 16 and the `DATABASE_URL` variable in `.env` (see `.env.example`).
+
+```bash
+# create the database user and database (once)
+psql -U postgres -c "CREATE USER eduportfolio WITH PASSWORD 'change_me';"
+psql -U postgres -c "CREATE DATABASE eduportfolio OWNER eduportfolio;"
+
+# create the migration without applying it, add the CHECK constraints
+# from docs/database-schema.md to migration.sql, then apply it
+npx prisma migrate dev --create-only --name init
+npx prisma migrate dev
+
+# generate the typed client and inspect the data
+npx prisma generate
+npx prisma studio
+```
+
+Run the commands from the directory that contains `prisma/`. Schema changes are made only through Prisma migrations, never by editing the database by hand.

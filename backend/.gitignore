@@ -1,0 +1,8 @@
+# Secrets
+.env
+
+# Build output and caches
+dist
+node_modules
+*.tsbuildinfo
+coverage

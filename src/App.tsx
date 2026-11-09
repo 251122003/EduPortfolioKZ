@@ -1,7 +1,7 @@
 import { useAppStore } from './state/useAppStore'
 
 function App() {
-  const {isLoading, setLoading} = useAppStore()
+  const {isLoading} = useAppStore()
 
   return (
     <>

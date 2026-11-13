@@ -1,0 +1,23 @@
+@startuml state-machine-award
+skinparam shadowing false
+skinparam state {
+  BackgroundColor #EEF4FB
+  BorderColor #1F3A5F
+}
+hide empty description
+title Award lifecycle — State Machine
+[*] --> active : createAward()\n[organization is verified]\n/ audit log, queue AI job
+active --> corrected : editOwnAward()\n[actor owns the award]\n/ audit log
+active --> corrected : approveChangeRequest()\n[role = admin AND type ≠ revoke]\n/ audit log
+corrected --> corrected : editOwnAward() [owner] / audit log
+corrected --> corrected : approveChangeRequest()\n[admin, type ≠ revoke] / audit log
+active --> revoked : approveChangeRequest()\n[role = admin AND type = revoke]\n/ audit log
+corrected --> revoked : approveChangeRequest()\n[role = admin AND type = revoke]\n/ audit log
+revoked --> corrected : restoreAward()\n[role = admin]\n/ audit log
+note bottom of revoked
+  Any other event → 409 Conflict.
+  DELETE is blocked by the
+  awards_no_delete trigger:
+  an award never reaches [*].
+end note
+@enduml

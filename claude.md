@@ -6,7 +6,7 @@ Rules for AI coding assistants (Cursor, Claude Code, GitHub Copilot) working in 
 
 EduPortfolio KZ: a registry of diplomas and certificates. Organizations enter awards, students get a profile, universities verify via QR/link. Course project for PED 741.
 
-Read `specifications.md` before changing behavior and `development.md` for setup and workflow. If something is not described there, ask before building it.
+Read `docs/specifications.md` before changing behavior and `development.md` for setup and workflow. If something is not described there, ask before building it.
 
 ## Stack constraints
 
@@ -72,5 +72,5 @@ Examples: `feat(auth): add student registration with SMS code`, `fix(otp): expir
 1. Run `npm run lint`, `npm run typecheck`, `npm test`. All must pass; coverage stays at 80% or above.
 2. Read the diff. Every generated line must be understood by the author.
 3. Check behavior manually: browser DevTools (network 200 OK, clean console) for the frontend, real requests for the API.
-4. Update `specifications.md` if behavior changed.
+4. Update `docs/specifications.md` if behavior changed.
 5. Commit with a Conventional Commit message.

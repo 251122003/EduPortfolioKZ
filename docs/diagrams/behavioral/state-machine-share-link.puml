@@ -1,0 +1,17 @@
+@startuml state-machine-share-link
+skinparam shadowing false
+skinparam state {
+  BackgroundColor #EEF4FB
+  BorderColor #1F3A5F
+}
+hide empty description
+title Share link lifecycle — State Machine
+[*] --> active : createShareLink()\n[≥ 1 award selected]\n/ store token hash, show link + QR once
+active --> active : open /v/:token\n[now < expires_at AND revoked_at is null]\n/ 200 OK with awards
+active --> expired : clock tick\n[now ≥ expires_at]
+active --> revoked : revokeLink()\n[actor owns the link]\n/ set revoked_at
+expired --> [*]
+revoked --> [*]
+note bottom of expired : Terminal: opening the link\nreturns 410 Gone.
+note bottom of revoked : Terminal: opening the link\nreturns 410 Gone.
+@enduml

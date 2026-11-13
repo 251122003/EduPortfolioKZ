@@ -48,7 +48,7 @@ EduPortfolioKZ/
 │   ├── style.css
 │   └── app.js              # later a Vite + React + TypeScript app
 ├── README.md
-├── specifications.md
+├── docs/specifications.md
 ├── development.md
 ├── claude.md
 └── .env.example
@@ -164,7 +164,7 @@ Mapping to the stages of the Application Development Plan: stages 1-2 (frontend 
 
 ## 9. Definition of done
 
-- Feature works as described in `specifications.md`
+- Feature works as described in `docs/specifications.md`
 - Tests pass, lint and type-check pass, CI green
 - Docs updated if behavior changed
 - Commit messages follow Conventional Commits

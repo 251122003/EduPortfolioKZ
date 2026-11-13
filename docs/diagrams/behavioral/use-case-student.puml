@@ -1,0 +1,43 @@
+@startuml use-case-student
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam actorStyle awesome
+skinparam usecase {
+  BackgroundColor #EEF4FB
+  BorderColor #1F3A5F
+}
+title Use Case Diagram A — Student and Verifier (UC-1, UC-3)
+actor "Student" as Student
+actor "Verifier\n(university)" as Verifier
+actor "SMS gateway\n<<external>>" as SMS
+rectangle "EduPortfolio KZ" {
+  usecase "UC-1\nRegister as student" as UC1
+  usecase "Validate IIN" as ValidateIIN
+  usecase "Confirm SMS code" as ConfirmCode
+  usecase "Match unclaimed record" as Match
+  usecase "Confirm guardian consent" as Consent
+  usecase "View own awards" as ViewAwards
+  usecase "Log in" as Login
+  usecase "UC-3\nCreate share link" as CreateLink
+  usecase "Generate QR code" as QR
+  usecase "Revoke share link" as RevokeLink
+  usecase "UC-3\nVerify portfolio by link" as Verify
+  usecase "Show revoked mark" as RevokedMark
+}
+Student --> UC1
+Student --> ViewAwards
+Student --> CreateLink
+Student --> RevokeLink
+Verifier --> Verify
+UC1 ..> ValidateIIN : <<include>>
+UC1 ..> ConfirmCode : <<include>>
+UC1 ..> Match : <<include>>
+Consent ..> UC1 : <<extend>>\n[student is under 18]
+ConfirmCode -- SMS
+ViewAwards ..> Login : <<include>>
+CreateLink ..> Login : <<include>>
+RevokeLink ..> Login : <<include>>
+CreateLink ..> QR : <<include>>
+RevokedMark ..> Verify : <<extend>>\n[an award was revoked]
+@enduml

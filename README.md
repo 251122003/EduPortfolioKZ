@@ -37,7 +37,8 @@ React + TypeScript, Node.js (NestJS), PostgreSQL, Prisma, Docker. See [developme
 
 ## Documentation
 
-- [specifications.md](specifications.md): requirements, data model, flows, security
+- [docs/specifications.md](docs/specifications.md): requirements (SRS), use cases, NFRs
+- [docs/diagrams/](docs/diagrams/): UML diagrams (use case, activity, state machine, CRC, class, sequence)
 - [development.md](development.md): setup, structure, workflow, roadmap
 - [claude.md](claude.md): rules for AI coding assistants in this repo
 
@@ -61,7 +62,7 @@ To be decided.
 
 ## Database setup
 
-The schema is in [`prisma/schema.prisma`](prisma/schema.prisma). Design, ERD and justification: [`docs/database-schema.md`](docs/database-schema.md).
+The schema is in [`backend/prisma/schema.prisma`](backend/prisma/schema.prisma). Design, ERD and justification: [`docs/database-schema.md`](docs/database-schema.md).
 
 Prerequisites: PostgreSQL 16 and the `DATABASE_URL` variable in `.env` (see `.env.example`).
 

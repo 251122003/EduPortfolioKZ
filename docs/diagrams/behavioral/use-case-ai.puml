@@ -1,0 +1,29 @@
+@startuml use-case-ai
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam actorStyle awesome
+skinparam usecase {
+  BackgroundColor #EEF4FB
+  BorderColor #1F3A5F
+}
+title Use Case Diagram C — Background AI review (UC-5)
+actor "AI worker\n<<system>>" as Worker
+actor "Admin" as Admin
+actor "LLM API\n<<external>>" as LLM
+rectangle "EduPortfolio KZ" {
+  usecase "UC-5\nReview new award" as UC5
+  usecase "Build sanitized payload\n(no IIN, phone, name)" as Sanitize
+  usecase "Run rule checks" as Rules
+  usecase "Retry with backoff" as Retry
+  usecase "Review AI flags" as ReviewFlags
+  usecase "Revoke award" as Revoke
+}
+Worker --> UC5
+UC5 -- LLM
+Admin --> ReviewFlags
+UC5 ..> Sanitize : <<include>>
+UC5 ..> Rules : <<include>>
+Retry ..> UC5 : <<extend>>\n[LLM error or timeout]
+Revoke ..> ReviewFlags : <<extend>>\n[flag confirmed]
+@enduml

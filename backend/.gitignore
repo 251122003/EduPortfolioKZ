@@ -6,3 +6,6 @@ dist
 node_modules
 *.tsbuildinfo
 coverage
+
+# Prisma Client is generated from schema.prisma (npx prisma generate)
+src/generated

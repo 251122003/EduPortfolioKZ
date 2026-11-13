@@ -1,0 +1,44 @@
+@startuml use-case-organization
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam actorStyle awesome
+skinparam usecase {
+  BackgroundColor #EEF4FB
+  BorderColor #1F3A5F
+}
+title Use Case Diagram B — Organization and Admin (UC-2, UC-4)
+actor "Organization" as Org
+actor "Admin" as Admin
+rectangle "EduPortfolio KZ" {
+  usecase "Register organization" as RegOrg
+  usecase "Create event" as CreateEvent
+  usecase "UC-2\nEnter award" as UC2
+  usecase "Validate IIN" as ValidateIIN
+  usecase "Create unclaimed\nstudent record" as Unclaimed
+  usecase "Queue AI review" as Queue
+  usecase "Edit own award" as Edit
+  usecase "UC-4\nRequest correction" as UC4
+  usecase "Log in" as Login
+  usecase "Write audit log" as Audit
+  usecase "Verify organization" as VerifyOrg
+  usecase "Review change request" as ReviewCR
+}
+Org --> RegOrg
+Org --> CreateEvent
+Org --> UC2
+Org --> Edit
+Org --> UC4
+Admin --> VerifyOrg
+Admin --> ReviewCR
+CreateEvent ..> Login : <<include>>
+UC2 ..> Login : <<include>>
+UC2 ..> ValidateIIN : <<include>>
+UC2 ..> Audit : <<include>>
+UC2 ..> Queue : <<include>>
+Unclaimed ..> UC2 : <<extend>>\n[no student with this IIN]
+Edit ..> Audit : <<include>>
+UC4 ..> Audit : <<include>>
+VerifyOrg ..> Audit : <<include>>
+ReviewCR ..> Audit : <<include>>
+@enduml

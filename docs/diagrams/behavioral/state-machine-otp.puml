@@ -1,0 +1,18 @@
+@startuml state-machine-otp
+skinparam shadowing false
+skinparam state {
+  BackgroundColor #EEF4FB
+  BorderColor #1F3A5F
+}
+hide empty description
+title OTP code (registration) lifecycle — State Machine
+left to right direction
+[*] --> issued : registerStudent()\n[IIN valid AND ≤ 3 SMS in last hour]\n/ save code hash, send SMS
+issued --> issued : verifyOtp(code)\n[code wrong AND attempts < 4]\n/ attempts + 1
+issued --> verified : verifyOtp(code)\n[code matches AND now < expires_at]\n/ create user, match record
+issued --> locked : verifyOtp(code)\n[code wrong AND attempts = 4]\n/ attempts = 5
+issued --> expired : clock tick\n[now ≥ expires_at (5 min)]
+verified --> [*]
+expired --> [*] : resendOtp()\nstarts a new code
+locked --> [*] : after 15 min\na new code may be requested
+@enduml

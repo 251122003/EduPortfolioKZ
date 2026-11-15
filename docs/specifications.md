@@ -368,6 +368,21 @@ The backend follows a layered structure: **controller** (HTTP, validation) → *
 
 Every error uses one body format: `{ "error": { "code": "...", "message": "..." } }`.
 
+A global exception filter (`AllExceptionsFilter`) builds this body for every error. Request data is validated with Zod through `ZodValidationPipe`.
+
+| Status | Code | When |
+|---|---|---|
+| 400 | `BAD_REQUEST` | Malformed request, e.g. broken JSON |
+| 401 | `UNAUTHORIZED` | Not signed in |
+| 403 | `FORBIDDEN` | No access to the record |
+| 404 | `NOT_FOUND` | Unknown route or record |
+| 409 | `CONFLICT` | Duplicate record |
+| 422 | `VALIDATION_ERROR` | Body, query or params fail the Zod schema; the message lists `field: problem` and never echoes input values |
+| 429 | `TOO_MANY_REQUESTS` | Rate limit hit |
+| 500 | `INTERNAL_ERROR` | Unexpected error; fixed message `Internal server error`, no details are sent to the client |
+
+A feature may send its own, more specific code (for example `AWARD_EXISTS`) by passing `{ code, message }` to an `HttpException`. Other statuses use the standard name, for example `LOCKED` for 423.
+
 ## 12. Traceability
 
 | Use case | Requirements | Diagrams |

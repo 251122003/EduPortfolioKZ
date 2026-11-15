@@ -11,8 +11,8 @@ Read `docs/specifications.md` before changing behavior and `development.md` for 
 ## Stack constraints
 
 - Frontend: `frontend/`. Currently vanilla HTML/CSS/JS. From Week 4: React 19 + TypeScript + Vite + Tailwind CSS + Zustand.
-- Backend: `backend/`. Node.js 22 with ES Modules (`import`/`export`, never `require`), Express, Zod, Prisma.
-- Database: PostgreSQL 16. Schema changes only through Prisma migrations, never by editing the database by hand.
+- Backend: `backend/`. Node.js 24 LTS with ES Modules (`import`/`export`, never `require`), NestJS 12, Zod, Prisma 7.
+- Database: PostgreSQL 18. Schema changes only through Prisma migrations, never by editing the database by hand.
 - Tests: Vitest. Do not add other frameworks or libraries without asking.
 
 ## TypeScript rules

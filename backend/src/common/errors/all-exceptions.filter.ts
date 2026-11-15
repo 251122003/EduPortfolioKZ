@@ -35,13 +35,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 // Reads code and message from what an HttpException carries: a plain string,
-// Nest's default { message, error, statusCode }, or our own { code, message }.
+// Nest's default { message, error, statusCode }, or our own { code, message, attemptsLeft? }.
 function bodyFromHttpException(exception: HttpException): ApiErrorBody {
   const status = exception.getStatus();
   const response: unknown = exception.getResponse();
 
   let code = codeForStatus(status);
   let message = exception.message;
+  let attemptsLeft: number | undefined;
 
   if (typeof response === 'string') {
     message = response;
@@ -55,9 +56,12 @@ function bodyFromHttpException(exception: HttpException): ApiErrorBody {
     } else if (Array.isArray(raw)) {
       message = raw.filter((item): item is string => typeof item === 'string').join('; ');
     }
+    if (typeof response.attemptsLeft === 'number') {
+      attemptsLeft = response.attemptsLeft;
+    }
   }
 
-  return apiError(code, message);
+  return apiError(code, message, attemptsLeft);
 }
 
 // Turns every error into { "error": { "code", "message" } }.

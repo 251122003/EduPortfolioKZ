@@ -62,6 +62,17 @@ describe('AllExceptionsFilter', () => {
     expect(json).toHaveBeenCalledWith({ error: { code: 'AWARD_EXISTS', message: 'Already added' } });
   });
 
+  it('passes attemptsLeft through when the exception has it', () => {
+    const { host, json } = fakeHost();
+    filter.catch(
+      new BadRequestException({ code: 'OTP_INVALID', message: 'Wrong code', attemptsLeft: 2 }),
+      host,
+    );
+    expect(json).toHaveBeenCalledWith({
+      error: { code: 'OTP_INVALID', message: 'Wrong code', attemptsLeft: 2 },
+    });
+  });
+
   it('joins a list of messages', () => {
     const { host, json } = fakeHost();
     filter.catch(new BadRequestException(['name is empty', 'date is wrong']), host);

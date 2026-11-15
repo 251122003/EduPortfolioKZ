@@ -163,6 +163,7 @@ SMS codes. Linked to students logically by phone_hash, no FK (the user does not 
 | `attempts` | `SMALLINT` |  | NOT NULL, DEFAULT 0, CHECK (attempts BETWEEN 0 AND 5) | Wrong attempts so far |
 | `status` | `otp_status` |  | NOT NULL, DEFAULT 'issued' | issued / verified / expired / locked |
 | `created_at` | `TIMESTAMPTZ` |  | NOT NULL, DEFAULT now() | Used for the 3 codes per hour limit |
+| `locked_at` | `TIMESTAMPTZ` |  | NULL | Time of the 5th wrong attempt; no new code for this phone for 15 minutes after it |
 
 ### `audit_log`
 

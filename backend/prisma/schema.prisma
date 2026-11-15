@@ -305,6 +305,8 @@ model OtpCode {
   status           OtpStatus @default(issued)
   createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   verifiedAt       DateTime? @map("verified_at") @db.Timestamptz(6)
+  // Set on the 5th wrong attempt; a new code for this phone is refused for 15 minutes after it.
+  lockedAt         DateTime? @map("locked_at") @db.Timestamptz(6)
 
   @@index([phoneHash, createdAt])
   @@map("otp_codes")

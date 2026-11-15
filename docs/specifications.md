@@ -112,9 +112,10 @@ The use case diagram and the full tabular specifications (actors, pre/post-condi
   - A1. Invalid IIN format or checksum: form error, no SMS is sent.
   - A2. IIN already registered: generic failure message that does not reveal whether the IIN exists.
   - A3. Wrong code: attempt counter increases; after 5 attempts the code is locked for 15 minutes.
-  - A4. Code expired: student requests a new code (limit 3 per hour per phone).
-  - A5. No matching unclaimed record, or only the IIN matches: an empty profile is created; awards are never attached on a partial match.
-  - A6. Under 18 and consent not confirmed: registration is blocked.
+  - A4. Code expired: student requests a new code (at most one per 60 seconds and 3 per hour per phone).
+  - A5. No student record with this IIN: an empty profile is created.
+  - A5a. A record with this IIN exists, but the normalized full name or the phone differs: 409 `STUDENT_DATA_MISMATCH` with one generic text ("data does not match the organizer's record, contact the organizer") that does not say which field differs; no account is created and no awards are attached.
+  - A6. Under 18: the account is created with an empty `guardian_consent_at`, and the response carries `guardianConsentRequired: true`. Collecting the consent and limiting the account until then is a separate task.
 - **Postconditions:** user account exists, student is `claimed`, code is marked used, event is written to the audit log.
 
 ### UC-2: Organization enters awards
@@ -207,8 +208,8 @@ Priority: **Must** = needed for the MVP demo; **Should** = planned for the MVP, 
 | FR-7 | The system shall let a student start registration with IIN, full name, phone and password, and shall reject an IIN with a wrong format, impossible birth date or wrong check digit (422) before sending any SMS. | Must | Unit test (`iin.spec.ts`) + API test |
 | FR-8 | The system shall send a 6-digit SMS code valid for 5 minutes and shall create the account only after the correct code is entered. | Must | API test with mock SMS provider |
 | FR-9 | The system shall link an unclaimed student record to the new account only when IIN, normalized full name (case, spaces, Ё/Е ignored) and phone all match. | Must | Unit + API test |
-| FR-10 | The system shall create an empty profile when no unclaimed record matches, and shall never attach awards on a partial match. | Must | API test |
-| FR-11 | The system shall derive the age from the IIN and shall block registration of a student under 18 until parental/guardian consent is confirmed. | Must | Unit test (`isMinor`) + API test |
+| FR-10 | The system shall create an empty profile when no student record has the IIN. When a record has the IIN but the normalized full name or the phone differs, the system shall refuse the registration with 409 and a generic message, and shall never attach awards on such a partial match. | Must | Unit + API test |
+| FR-11 | The system shall derive the age from the IIN and mark a student under 18 as needing parental/guardian consent. Current version: the account is created, `guardian_consent_at` stays empty and the registration response returns `guardianConsentRequired: true`; collecting the consent and restricting the account until then is a separate task. | Must | Unit test (`isMinor`) + API test |
 | FR-12 | The system shall show a logged-in student all own awards with status `active`, `corrected` or `revoked`, with revoked awards visibly marked. | Must | API + UI test |
 | FR-25 | The system shall authenticate a student by phone number and password, and staff (organization, admin) by email and password. | Must | API test |
 
@@ -254,7 +255,7 @@ Priority: **Must** = needed for the MVP demo; **Should** = planned for the MVP, 
 | NFR-4 | Testing | Each app shall keep at least **80% statement coverage**. | Coverage threshold fails CI |
 | NFR-5 | Security | Traffic shall use **HTTPS only**; passwords shall be hashed with **argon2**; IIN and phone shall be stored with **AES-256-GCM** and searched by **HMAC-SHA256**; IIN and phone shall never appear in logs, URLs, public pages or audit entries; JWT shall be kept in an `httpOnly`, `Secure`, `SameSite=Strict` cookie. | Unit tests (`identity-crypto.spec.ts`), code review, log checks |
 | NFR-6 | Privacy | The system shall comply with the Law of the Republic of Kazakhstan "On personal data and their protection": collect only listed fields, require guardian consent under 18, and keep data inside the country for production. | Review before pilot |
-| NFR-7 | Anti-abuse | OTP codes shall expire after **5 min** and lock after **5** wrong attempts for **15 min**; at most **3 SMS per phone per hour**; login and public verification shall be limited to **10 requests per minute per IP** (then 429). | Automated tests |
+| NFR-7 | Anti-abuse | OTP codes shall expire after **5 min** and lock after **5** wrong attempts for **15 min**; at most **one SMS per phone per 60 s** and **3 SMS per phone per hour**; login and public verification shall be limited to **10 requests per minute per IP** (then 429). | Automated tests |
 | NFR-8 | Availability | The production service shall be available **99% per month** (≤ 7.3 h downtime); the database shall be backed up **daily** with a restore tested before release (RPO ≤ 24 h, RTO ≤ 4 h). | Uptime monitor on `/health`, restore test |
 | NFR-9 | Scalability | The API shall be stateless; lookups shall use indexes on `iin_hash`, `phone_hash`, `token_hash`; the AI worker shall scale separately from the API. | Query plans reviewed |
 | NFR-10 | Localization | All user-facing text shall go through i18n with `kk` and `ru` keys. | Missing-key check in CI |
@@ -348,9 +349,9 @@ The backend follows a layered structure: **controller** (HTTP, validation) → *
 | Method | Path | Description | Success | Main errors |
 |---|---|---|---|---|
 | GET | `/health` | API and database status | 200 | 503 |
-| POST | `/auth/register/student` | Start student registration, send SMS | 202 | 422, 429 |
-| POST | `/auth/verify-otp` | Confirm code, finish registration | 201 | 400, 410, 423 |
-| POST | `/auth/resend-otp` | Send a new code | 202 | 429 |
+| POST | `/auth/register/student` | Start student registration, send SMS; returns `{ otpId }` | 202 | 422, 429 |
+| POST | `/auth/verify-otp` | Confirm code, finish registration; returns `{ studentId, guardianConsentRequired }` (session cookie comes with login, BE-08) | 201 | 400, 409, 410, 422, 423 |
+| POST | `/auth/resend-otp` | Send a new code; returns a new `{ otpId }` | 202 | 422, 429 |
 | POST | `/auth/login` | Log in | 200 | 401, 429 |
 | POST | `/organizations` | Submit organization request | 201 | 409, 422 |
 | PATCH | `/admin/organizations/:id` | Approve, reject, suspend | 200 | 403, 404 |
@@ -382,6 +383,20 @@ A global exception filter (`AllExceptionsFilter`) builds this body for every err
 | 500 | `INTERNAL_ERROR` | Unexpected error; fixed message `Internal server error`, no details are sent to the client |
 
 A feature may send its own, more specific code (for example `AWARD_EXISTS`) by passing `{ code, message }` to an `HttpException`. Other statuses use the standard name, for example `LOCKED` for 423.
+
+**Format extension: `attemptsLeft`.** The `error` object may carry one optional field, `attemptsLeft` (integer), sent only by `POST /auth/verify-otp` on a wrong code: `{ "error": { "code": "OTP_INVALID", "message": "...", "attemptsLeft": 3 } }`. Clients must ignore it when absent. The filter copies it from an `HttpException` body `{ code, message, attemptsLeft }`.
+
+Registration codes (UC-1):
+
+| Status | Code | When |
+|---|---|---|
+| 400 | `OTP_INVALID` | Wrong SMS code; `attemptsLeft` says how many tries remain |
+| 409 | `STUDENT_DATA_MISMATCH` | The IIN matches an organizer's record, but the name or phone does not (UC-1 A5a) |
+| 410 | `OTP_EXPIRED` | Code expired, already used, replaced by a new one, or unknown `otpId` |
+| 423 | `OTP_LOCKED` | 5 wrong attempts; a new code for this phone is refused for 15 minutes (429) |
+| 429 | `TOO_MANY_REQUESTS` | Less than 60 s since the last code, 3 codes in the last hour, or the phone is locked |
+
+An IIN or phone that already has an account gets the same 202 as a new one, with a random `otpId` and no SMS (UC-1 A2); `resend-otp` answers the same way for an unknown or used `otpId`. In development `SMS_PROVIDER=mock` sends nothing and writes only `otpId` and the code to the server console, never the phone; the app refuses to start with the mock when `NODE_ENV=production`.
 
 ## 12. Traceability
 

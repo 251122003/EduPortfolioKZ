@@ -1,6 +1,11 @@
 import { UnprocessableEntityException } from '@nestjs/common';
 import { ZodValidationPipe } from '../common/validation/zod-validation.pipe.js';
-import { registerStudentSchema, resendOtpSchema, verifyOtpSchema } from './auth.contracts.js';
+import {
+  loginSchema,
+  registerStudentSchema,
+  resendOtpSchema,
+  verifyOtpSchema,
+} from './auth.contracts.js';
 
 // Synthetic IIN with a valid check digit: born 2008-03-15.
 const valid = {
@@ -68,5 +73,44 @@ describe('verifyOtpSchema and resendOtpSchema', () => {
   it('rejects an otpId that is not a uuid', () => {
     expect(verifyOtpSchema.safeParse({ otpId: '1', code: '123456' }).success).toBe(false);
     expect(resendOtpSchema.safeParse({ otpId: '1' }).success).toBe(false);
+  });
+});
+
+describe('loginSchema', () => {
+  const pipe = new ZodValidationPipe(loginSchema);
+
+  it('normalizes a student phone', () => {
+    expect(pipe.transform({ phone: '8 (701) 000-00-01', password: 'x' })).toEqual({
+      phone: '+77010000001',
+      password: 'x',
+    });
+  });
+
+  it('trims and lower-cases a staff email', () => {
+    expect(pipe.transform({ login: '  Org@EduPortfolio.TEST ', password: 'x' })).toEqual({
+      login: 'org@eduportfolio.test',
+      password: 'x',
+    });
+  });
+
+  it.each([
+    ['no phone and no login', { password: 'x' }],
+    ['not a Kazakhstan mobile', { phone: '+1 202 555 0100', password: 'x' }],
+    ['not an email', { login: 'org', password: 'x' }],
+    ['empty password', { login: 'org@eduportfolio.test', password: '' }],
+    ['long password', { login: 'org@eduportfolio.test', password: 'x'.repeat(129) }],
+  ])('answers 422 for %s', (_reason, body) => {
+    expect(() => pipe.transform(body)).toThrow(UnprocessableEntityException);
+  });
+
+  it('never echoes the phone or the password in the error message', () => {
+    try {
+      pipe.transform({ phone: '+1 202 555 0100', password: 'Secret-Password' });
+      expect.unreachable();
+    } catch (error: unknown) {
+      const body = JSON.stringify((error as UnprocessableEntityException).getResponse());
+      expect(body).not.toContain('202 555');
+      expect(body).not.toContain('Secret-Password');
+    }
   });
 });

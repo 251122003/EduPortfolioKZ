@@ -1,9 +1,11 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   GoneException,
   HttpException,
   HttpStatus,
+  UnauthorizedException,
 } from '@nestjs/common';
 
 // Errors of the registration flow. Messages never contain IIN, phone or the code.
@@ -45,4 +47,22 @@ export function studentDataMismatch(): HttpException {
     code: 'STUDENT_DATA_MISMATCH',
     message: "Data does not match the organizer's record, contact the organizer",
   });
+}
+
+// Login: one answer for an unknown user and a wrong password, so neither is revealed.
+export function invalidCredentials(): HttpException {
+  return new UnauthorizedException({
+    code: 'INVALID_CREDENTIALS',
+    message: 'Wrong login or password',
+  });
+}
+
+// No session cookie, or the token is invalid or expired.
+export function notSignedIn(): HttpException {
+  return new UnauthorizedException({ code: 'UNAUTHORIZED', message: 'Sign in required' });
+}
+
+// Signed in, but the role is not allowed here.
+export function forbidden(): HttpException {
+  return new ForbiddenException({ code: 'FORBIDDEN', message: 'Access denied' });
 }

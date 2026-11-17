@@ -350,9 +350,11 @@ The backend follows a layered structure: **controller** (HTTP, validation) → *
 |---|---|---|---|---|
 | GET | `/health` | API and database status | 200 | 503 |
 | POST | `/auth/register/student` | Start student registration, send SMS; returns `{ otpId }` | 202 | 422, 429 |
-| POST | `/auth/verify-otp` | Confirm code, finish registration; returns `{ studentId, guardianConsentRequired }` (session cookie comes with login, BE-08) | 201 | 400, 409, 410, 422, 423 |
+| POST | `/auth/verify-otp` | Confirm code, finish registration; returns `{ studentId, guardianConsentRequired }` and sets the session cookie | 201 | 400, 409, 410, 422, 423 |
 | POST | `/auth/resend-otp` | Send a new code; returns a new `{ otpId }` | 202 | 422, 429 |
-| POST | `/auth/login` | Log in | 200 | 401, 429 |
+| POST | `/auth/login` | Log in: student `{ phone, password }`, staff `{ login, password }`; returns `{ userId, role }` and sets the session cookie | 200 | 401, 422, 429 |
+| POST | `/auth/logout` | Clear the session cookie (works with or without a session) | 204 | — |
+| GET | `/auth/me` | Current user: `{ userId, role, locale, studentId, organization }`, no IIN or phone | 200 | 401 |
 | POST | `/organizations` | Submit organization request | 201 | 409, 422 |
 | PATCH | `/admin/organizations/:id` | Approve, reject, suspend | 200 | 403, 404 |
 | POST | `/events` | Create event | 201 | 403, 422 |
@@ -397,6 +399,16 @@ Registration codes (UC-1):
 | 429 | `TOO_MANY_REQUESTS` | Less than 60 s since the last code, 3 codes in the last hour, or the phone is locked |
 
 An IIN or phone that already has an account gets the same 202 as a new one, with a random `otpId` and no SMS (UC-1 A2); `resend-otp` answers the same way for an unknown or used `otpId`. In development `SMS_PROVIDER=mock` sends nothing and writes only `otpId` and the code to the server console, never the phone; the app refuses to start with the mock when `NODE_ENV=production`.
+
+**Sessions (FR-25).** A successful login or `verify-otp` sets the cookie `session`: a JWT (HS256, claims `sub` = user id and `role`, nothing personal) valid for **8 hours**, `httpOnly`, `SameSite=Strict`, `Path=/`, `Secure` when `NODE_ENV=production`. There is no refresh token; after 8 hours the user logs in again. Tokens signed with any algorithm other than HS256 are rejected. The secret is `JWT_SECRET` in `backend/.env` (at least 32 characters); the app refuses to start without it. Protected routes use `SessionGuard` (401 `UNAUTHORIZED` without a valid cookie) and, for role checks, `RolesGuard` with `@Roles('student' | 'organization' | 'admin')` (403 `FORBIDDEN`). Staff of an organization in any status can log in; `/auth/me` shows the status, and FR-2 limits are enforced by the event and award endpoints. Login rate limits (NFR-7) come with BE-15.
+
+Login codes:
+
+| Status | Code | When |
+|---|---|---|
+| 401 | `INVALID_CREDENTIALS` | Unknown phone or email, or wrong password. One body for every case, and the password is always checked with argon2 (against a dummy hash when there is no user), so neither the answer nor its timing tells whether the account exists |
+| 401 | `UNAUTHORIZED` | `/auth/me` or another protected route without a valid session cookie |
+| 422 | `VALIDATION_ERROR` | Body has neither a valid phone nor a valid email, or the password is empty |
 
 ## 12. Traceability
 

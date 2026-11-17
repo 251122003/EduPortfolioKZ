@@ -184,6 +184,7 @@ describe('RegistrationService', () => {
       otp.check.mockResolvedValue(otpRow());
 
       await expect(service.completeRegistration('otp-1', '123456')).resolves.toEqual({
+        userId: 'user-1',
         studentId: 'student-1',
         guardianConsentRequired: false,
       });

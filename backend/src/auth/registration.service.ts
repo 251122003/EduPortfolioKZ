@@ -28,6 +28,11 @@ const pendingRegistrationSchema = z.object({
 });
 type PendingRegistration = z.infer<typeof pendingRegistrationSchema>;
 
+/** Result of verify-otp: the response body plus the new user's id, which the controller needs for the session. */
+export interface CompletedRegistration extends StudentRegisteredResponse {
+  userId: string;
+}
+
 // UC-1: student registration by IIN and SMS code.
 // IIN and phone exist in plain text only in memory: stored encrypted, looked up by HMAC hash,
 // never logged and never returned.
@@ -108,14 +113,14 @@ export class RegistrationService {
   }
 
   /** POST /auth/verify-otp: checks the code, creates the account and links the student record. */
-  async completeRegistration(otpId: string, code: string): Promise<StudentRegisteredResponse> {
+  async completeRegistration(otpId: string, code: string): Promise<CompletedRegistration> {
     const row = await this.otp.check(otpId, code);
     if (row.payloadEncrypted === null) {
       throw otpExpired();
     }
     const pending = this.decryptPending(row.payloadEncrypted);
 
-    const studentId = await this.transactions.run(async (db) => {
+    const { userId, studentId } = await this.transactions.run(async (db) => {
       await this.otp.consume(row.id, db);
       const user = await this.users.createStudentUser(
         { passwordHash: pending.passwordHash, locale: pending.locale },
@@ -131,14 +136,15 @@ export class RegistrationService {
         },
         db,
       );
-      return this.matching.linkOrCreate(
+      const linkedStudentId = await this.matching.linkOrCreate(
         { userId: user.id, iin: pending.iin, phone: pending.phone, fullName: pending.fullName },
         db,
       );
+      return { userId: user.id, studentId: linkedStudentId };
     });
 
     // FR-11: the account exists, guardian_consent_at stays empty; consent is a separate step.
-    return { studentId, guardianConsentRequired: isMinor(pending.iin, this.clock()) };
+    return { userId, studentId, guardianConsentRequired: isMinor(pending.iin, this.clock()) };
   }
 
   private decryptPending(payload: Uint8Array): PendingRegistration {

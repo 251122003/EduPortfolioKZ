@@ -117,6 +117,26 @@ describe('Student registration (e2e)', () => {
     const body = finished.body as { studentId: string; guardianConsentRequired: boolean };
     expect(body.guardianConsentRequired).toBe(true);
 
+    // Sequence diagram 2: verify-otp signs the new student in right away.
+    const setCookie: unknown = finished.headers['set-cookie'];
+    const session = (Array.isArray(setCookie) ? (setCookie as string[]) : []).find((cookie) =>
+      cookie.startsWith('session='),
+    );
+    expect(session).toMatch(/HttpOnly/i);
+    const me = await request(app.getHttpServer())
+      .get('/auth/me')
+      .set('Cookie', (session ?? '').split(';')[0])
+      .expect(200);
+    expect(me.body).toMatchObject({ role: 'student', studentId: body.studentId, organization: null });
+    expect(JSON.stringify(me.body)).not.toContain(iin);
+    expect(JSON.stringify(me.body)).not.toContain(phone);
+
+    // The new student can also sign in with phone + password.
+    await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ phone, password: 'Correct-Horse-1' })
+      .expect(200, { userId: (me.body as { userId: string }).userId, role: 'student' });
+
     const student = await prisma.student.findUniqueOrThrow({ where: { id: body.studentId } });
     expect(student.status).toBe('claimed');
     expect(student.iinHash).toBe(crypto.hash('iin', iin));

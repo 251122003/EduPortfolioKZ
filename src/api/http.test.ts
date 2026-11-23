@@ -35,6 +35,30 @@ describe('request', () => {
     expect(error).toMatchObject({ status: 401, code: 'UNAUTHORIZED', message: 'Sign in required' });
   });
 
+  it('reads attemptsLeft when the error body has it', async () => {
+    mockFetch(
+      Response.json(
+        { error: { code: 'OTP_INVALID', message: 'Wrong code', attemptsLeft: 3 } },
+        { status: 400 },
+      ),
+    );
+    await expect(request('/auth/verify-otp')).rejects.toMatchObject({
+      status: 400,
+      code: 'OTP_INVALID',
+      attemptsLeft: 3,
+    });
+  });
+
+  it('ignores attemptsLeft that is not a number', async () => {
+    mockFetch(
+      Response.json(
+        { error: { code: 'OTP_INVALID', message: 'Wrong code', attemptsLeft: 'x' } },
+        { status: 400 },
+      ),
+    );
+    await expect(request('/auth/verify-otp')).rejects.toMatchObject({ attemptsLeft: undefined });
+  });
+
   it('uses UNKNOWN when the error body has another shape', async () => {
     mockFetch(new Response('oops', { status: 500, statusText: 'Internal Server Error' }));
     await expect(request('/auth/me')).rejects.toMatchObject({ status: 500, code: 'UNKNOWN' });

@@ -8,6 +8,9 @@ vi.mock('../../api/auth', () => ({
   login: vi.fn(),
   logout: vi.fn(),
   getMe: vi.fn(),
+  registerStudent: vi.fn(),
+  verifyOtp: vi.fn(),
+  resendOtp: vi.fn(),
 }));
 
 function renderAt(path: string): ReturnType<typeof createMemoryRouter> {

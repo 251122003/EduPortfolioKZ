@@ -1,10 +1,26 @@
 import { z } from 'zod';
 import { isValidIin, normalizeIin } from '../common/identity/iin.js';
 import { normalizePhone } from '../common/identity/identity-crypto.js';
-import type { LoginRequest } from './auth.types.js';
+import type {
+  LoginRequest,
+  RegisterStudentRequest,
+  ResendOtpRequest,
+  VerifyOtpRequest,
+} from './auth.types.js';
 
 export { userRoles } from './auth.types.js';
-export type { ApiErrorBody, LoginRequest, MeResponse, SessionResponse, UserRoleName } from './auth.types.js';
+export type {
+  ApiErrorBody,
+  LoginRequest,
+  MeResponse,
+  OtpSentResponse,
+  RegisterStudentRequest,
+  ResendOtpRequest,
+  SessionResponse,
+  StudentRegisteredResponse,
+  UserRoleName,
+  VerifyOtpRequest,
+} from './auth.types.js';
 
 // Request and response shapes for student registration (UC-1).
 // One place for both sides: the server validates with these schemas,
@@ -56,28 +72,22 @@ export const loginSchema = z.union([
   }),
 ]);
 
-/** What the client sends to POST /auth/register/student. */
-export type RegisterStudentRequest = z.input<typeof registerStudentSchema>;
-/** The same body after validation: IIN and phone normalized, locale filled in. */
+/** The register body after validation: IIN and phone normalized, locale filled in. */
 export type RegisterStudentInput = z.output<typeof registerStudentSchema>;
-export type VerifyOtpRequest = z.infer<typeof verifyOtpSchema>;
-export type ResendOtpRequest = z.infer<typeof resendOtpSchema>;
 
-/** 202 from register/student and resend-otp. */
-export interface OtpSentResponse {
-  otpId: string;
-}
-
-/** 201 from verify-otp. */
-export interface StudentRegisteredResponse {
-  studentId: string;
-  guardianConsentRequired: boolean;
-}
-
-/** The same body after validation: phone normalized, login trimmed and lower-cased. */
+/** The login body after validation: phone normalized, login trimmed and lower-cased. */
 export type LoginInput = z.output<typeof loginSchema>;
 
-// The plain LoginRequest in auth.types.ts must accept exactly what the schema accepts.
+// The plain request types in auth.types.ts must accept exactly what the schemas accept.
 type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 const loginRequestMatchesSchema: Same<LoginRequest, z.input<typeof loginSchema>> = true;
+const registerRequestMatchesSchema: Same<
+  RegisterStudentRequest,
+  z.input<typeof registerStudentSchema>
+> = true;
+const verifyRequestMatchesSchema: Same<VerifyOtpRequest, z.input<typeof verifyOtpSchema>> = true;
+const resendRequestMatchesSchema: Same<ResendOtpRequest, z.input<typeof resendOtpSchema>> = true;
 void loginRequestMatchesSchema;
+void registerRequestMatchesSchema;
+void verifyRequestMatchesSchema;
+void resendRequestMatchesSchema;

@@ -7,12 +7,15 @@ const API_PREFIX = '/api';
 export class ApiError extends Error {
   readonly status: number;
   readonly code: string;
+  /** Only for OTP_INVALID from verify-otp: how many tries remain. */
+  readonly attemptsLeft: number | undefined;
 
-  constructor(status: number, code: string, message: string) {
+  constructor(status: number, code: string, message: string, attemptsLeft?: number) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.code = code;
+    this.attemptsLeft = attemptsLeft;
   }
 }
 
@@ -27,6 +30,12 @@ function isApiErrorBody(value: unknown): value is ApiErrorBody {
     'message' in error &&
     typeof error.message === 'string'
   );
+}
+
+/** The optional attemptsLeft field; ignored when absent or not a number. */
+function attemptsLeftOf(body: ApiErrorBody): number | undefined {
+  const value: unknown = body.error.attemptsLeft;
+  return typeof value === 'number' ? value : undefined;
 }
 
 async function readJson(response: Response): Promise<unknown> {
@@ -53,7 +62,12 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
   if (!response.ok) {
     const body = await readJson(response);
     if (isApiErrorBody(body)) {
-      throw new ApiError(response.status, body.error.code, body.error.message);
+      throw new ApiError(
+        response.status,
+        body.error.code,
+        body.error.message,
+        attemptsLeftOf(body),
+      );
     }
     throw new ApiError(response.status, 'UNKNOWN', response.statusText);
   }

@@ -358,6 +358,13 @@ The backend follows a layered structure: **controller** (HTTP, validation) → *
 
 The browser calls the API only under the **`/api`** prefix on its own origin (for example `/api/auth/me`). The Vite dev proxy strips the prefix and forwards to the server on `http://localhost:3000`, so the `SameSite=Strict` session cookie works and SPA paths such as `/me` and `/v/:token` do not clash with server paths of the same name. Production must route `/api/*` the same way. API payload types live in `backend/src/auth/auth.types.ts` and are shared by both sides.
 
+**Registration and sign-in pages (UC-1, FR-25).**
+- `/register` has fields IIN, last name, first name, middle name (optional), phone, password and a required checkbox "consent to personal data processing". The client joins the names into `fullName` = "Last First Middle" (the middle name only when given). The consent checkbox is checked only in the browser and is not sent to the server. The client checks format only (IIN is 12 digits, phone has 10 or 11 digits, password at least 8 characters); the IIN checksum and phone rules are checked by the server (422).
+- After 202 the page opens `/register/otp` and passes only `otpId` in the router state, never IIN or phone. If the state is missing (page reloaded), `/register/otp` asks to start registration again.
+- `/register/otp` takes a 6-digit code. "Send again" is disabled for 60 seconds after each code; a resend replaces `otpId`. Wrong code shows `attemptsLeft`; 423 `OTP_LOCKED` disables the form. After 201 the client loads `/auth/me` and opens `/me`; when `guardianConsentRequired` is true, `/me` shows a notice.
+- `/login` has two tabs: "Student" (phone + password) and "Organization / admin" (email + password). Any 401 shows one text, "wrong login or password".
+- Error texts are chosen by `error.code` from `src/i18n/ru.ts`; the server `message` is never shown. Submit buttons are disabled while a request runs.
+
 ## 11. API overview (REST)
 
 | Method | Path | Description | Success | Main errors |

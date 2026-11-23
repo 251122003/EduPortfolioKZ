@@ -4,6 +4,11 @@ export type {
   ApiErrorBody,
   LoginRequest,
   MeResponse,
+  OtpSentResponse,
+  RegisterStudentRequest,
+  ResendOtpRequest,
   SessionResponse,
+  StudentRegisteredResponse,
   UserRoleName,
+  VerifyOtpRequest,
 } from '../../backend/src/auth/auth.types';

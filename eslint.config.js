@@ -6,7 +6,8 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // backend/ has its own linter (oxlint, `npm run lint` inside backend/).
+  globalIgnores(['dist', 'coverage', 'backend']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

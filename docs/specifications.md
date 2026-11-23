@@ -344,6 +344,20 @@ Diagrams with triggers and guards: [diagrams/behavioral/state-machine-diagram.md
 
 The backend follows a layered structure: **controller** (HTTP, validation) → **service** (business rules) → **repository** (Prisma, the only layer that touches PostgreSQL). CRC cards for every class are in [diagrams/structural/crc-cards.md](diagrams/structural/crc-cards.md); the HTTP flows are in [diagrams/structural/sequence-diagram.md](diagrams/structural/sequence-diagram.md).
 
+**Frontend.** React SPA in the repository root (`src/`). Routes:
+
+| Path | Page | Access |
+|---|---|---|
+| `/` | Home | Public |
+| `/register` | Student registration | Public |
+| `/register/otp` | SMS code confirmation | Public |
+| `/login` | Sign in | Public |
+| `/me` | Student profile | Signed-in users; others are redirected to `/login` |
+| `/v/:token` | Public verification | Public |
+| any other | 404 | Public |
+
+The browser calls the API only under the **`/api`** prefix on its own origin (for example `/api/auth/me`). The Vite dev proxy strips the prefix and forwards to the server on `http://localhost:3000`, so the `SameSite=Strict` session cookie works and SPA paths such as `/me` and `/v/:token` do not clash with server paths of the same name. Production must route `/api/*` the same way. API payload types live in `backend/src/auth/auth.types.ts` and are shared by both sides.
+
 ## 11. API overview (REST)
 
 | Method | Path | Description | Success | Main errors |

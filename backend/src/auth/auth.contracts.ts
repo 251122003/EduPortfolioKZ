@@ -1,6 +1,10 @@
 import { z } from 'zod';
 import { isValidIin, normalizeIin } from '../common/identity/iin.js';
 import { normalizePhone } from '../common/identity/identity-crypto.js';
+import type { LoginRequest } from './auth.types.js';
+
+export { userRoles } from './auth.types.js';
+export type { ApiErrorBody, LoginRequest, MeResponse, SessionResponse, UserRoleName } from './auth.types.js';
 
 // Request and response shapes for student registration (UC-1).
 // One place for both sides: the server validates with these schemas,
@@ -52,9 +56,6 @@ export const loginSchema = z.union([
   }),
 ]);
 
-export const userRoles = ['student', 'organization', 'admin'] as const;
-export type UserRoleName = (typeof userRoles)[number];
-
 /** What the client sends to POST /auth/register/student. */
 export type RegisterStudentRequest = z.input<typeof registerStudentSchema>;
 /** The same body after validation: IIN and phone normalized, locale filled in. */
@@ -73,28 +74,10 @@ export interface StudentRegisteredResponse {
   guardianConsentRequired: boolean;
 }
 
-/** What the client sends to POST /auth/login. */
-export type LoginRequest = z.input<typeof loginSchema>;
 /** The same body after validation: phone normalized, login trimmed and lower-cased. */
 export type LoginInput = z.output<typeof loginSchema>;
 
-/** 200 from POST /auth/login. The session itself travels in the httpOnly cookie. */
-export interface SessionResponse {
-  userId: string;
-  role: UserRoleName;
-}
-
-/** 200 from GET /auth/me. Never contains IIN or phone. */
-export interface MeResponse {
-  userId: string;
-  role: UserRoleName;
-  locale: 'kk' | 'ru';
-  /** Set for students only. */
-  studentId: string | null;
-  /** Set for organization staff only. */
-  organization: {
-    id: string;
-    name: string;
-    status: 'pending' | 'verified' | 'rejected' | 'suspended';
-  } | null;
-}
+// The plain LoginRequest in auth.types.ts must accept exactly what the schema accepts.
+type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+const loginRequestMatchesSchema: Same<LoginRequest, z.input<typeof loginSchema>> = true;
+void loginRequestMatchesSchema;

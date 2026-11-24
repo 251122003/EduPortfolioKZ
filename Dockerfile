@@ -15,6 +15,7 @@ COPY public ./public
 COPY src ./src
 # The frontend reuses the API payload types from the backend.
 COPY backend/src/auth/auth.types.ts ./backend/src/auth/auth.types.ts
+COPY backend/src/awards/awards.types.ts ./backend/src/awards/awards.types.ts
 RUN npm run build
 
 # 2. Backend: generate the Prisma Client and compile NestJS into /app/backend/dist.

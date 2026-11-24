@@ -356,7 +356,7 @@ The backend follows a layered structure: **controller** (HTTP, validation) → *
 | `/v/:token` | Public verification | Public |
 | any other | 404 | Public |
 
-The browser calls the API only under the **`/api`** prefix on its own origin (for example `/api/auth/me`). The NestJS server itself puts every route under `/api` (`setGlobalPrefix` in `backend/src/app.setup.ts`, also used by the e2e tests). In development the Vite proxy forwards `/api/*` unchanged to `http://localhost:3000`. In production one server is the single origin: it serves the API under `/api`, the built frontend from `dist/` as static files, and `index.html` for any other `GET` path, so React Router opens `/me`, `/login` and `/v/:token` after a reload; an unknown `/api/...` path still gets the JSON 404. The `SameSite=Strict` session cookie works in both cases. Deployment steps: [deployment.md](deployment.md). API payload types live in `backend/src/auth/auth.types.ts` and are shared by both sides.
+The browser calls the API only under the **`/api`** prefix on its own origin (for example `/api/auth/me`). The NestJS server itself puts every route under `/api` (`setGlobalPrefix` in `backend/src/app.setup.ts`, also used by the e2e tests). In development the Vite proxy forwards `/api/*` unchanged to `http://localhost:3000`. In production one server is the single origin: it serves the API under `/api`, the built frontend from `dist/` as static files, and `index.html` for any other `GET` path, so React Router opens `/me`, `/login` and `/v/:token` after a reload; an unknown `/api/...` path still gets the JSON 404. The `SameSite=Strict` session cookie works in both cases. Deployment steps: [deployment.md](deployment.md). API payload types live in `backend/src/auth/auth.types.ts` and `backend/src/awards/awards.types.ts` (files without imports) and are shared by both sides.
 
 **Registration and sign-in pages (UC-1, FR-25).**
 - `/register` has fields IIN, last name, first name, middle name (optional), phone, password and a required checkbox "consent to personal data processing". The client joins the names into `fullName` = "Last First Middle" (the middle name only when given). The consent checkbox is checked only in the browser and is not sent to the server. The client checks format only (IIN is 12 digits, phone has 10 or 11 digits, password at least 8 characters); the IIN checksum and phone rules are checked by the server (422).
@@ -387,10 +387,12 @@ The server serves every path below under the global prefix **`/api`** (for examp
 | PATCH | `/admin/change-requests/:id` | Approve / reject | 200 | 403, 422 |
 | GET | `/admin/ai-flags` | List AI flags | 200 | 403 |
 | PATCH | `/admin/ai-flags/:id` | Confirm or dismiss a flag | 200 | 403 |
-| GET | `/me/awards` | Student's awards | 200 | 401 |
+| GET | `/me/awards` | Student's own awards (role `student` only); returns `{ awards: StudentAward[] }`, see below | 200 | 401, 403 |
 | POST | `/me/share-links` | Create link | 201 | 401, 422 |
 | DELETE | `/me/share-links/:id` | Revoke link | 204 | 401, 404 |
 | GET | `/v/:token` | Public verification data | 200 | 404, 410, 429 |
+
+**Student awards (FR-12).** `GET /me/awards` uses `SessionGuard` + `RolesGuard` with `@Roles('student')`: no session gives 401 `UNAUTHORIZED`, an organization or admin gets 403 `FORBIDDEN`. The answer is `{ awards: [...] }` with every award of the signed-in student, `active`, `corrected` and `revoked`. Each item has `id`, `type` (`diploma` / `certificate`), `place` (or `null`), `documentNumber`, `status`, `revokeReason`, `event { title, subject, date (YYYY-MM-DD), level }` and `organization { name, status }`. `revokeReason` is the reason of the latest approved `revoke` change request; it is `null` for awards that are not revoked or have no such request. Order: event date, newest first; awards of the same date by creation time, newest first. The answer never contains IIN, phone, full name, the student id, hashes or encrypted fields.
 
 Every error uses one body format: `{ "error": { "code": "...", "message": "..." } }`.
 

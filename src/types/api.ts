@@ -12,3 +12,4 @@ export type {
   UserRoleName,
   VerifyOtpRequest,
 } from '../../backend/src/auth/auth.types';
+export type { StudentAward, StudentAwardsResponse } from '../../backend/src/awards/awards.types';

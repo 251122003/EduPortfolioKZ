@@ -4,6 +4,7 @@ import { randomInt } from 'node:crypto';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { AppModule } from '../src/app.module.js';
+import { configureApp } from '../src/app.setup.js';
 import { SMS_SENDER } from '../src/auth/sms/sms-sender.js';
 import { IdentityCrypto } from '../src/common/identity/identity-crypto.js';
 import { iinCheckDigit } from '../src/common/identity/iin.js';
@@ -41,6 +42,7 @@ describe('Student registration (e2e)', () => {
       .useValue(sms)
       .compile();
     app = moduleRef.createNestApplication();
+    configureApp(app);
     await app.init();
     prisma = app.get(PrismaService);
     crypto = app.get(IdentityCrypto);
@@ -65,13 +67,13 @@ describe('Student registration (e2e)', () => {
     });
 
     const started = await request(app.getHttpServer())
-      .post('/auth/register/student')
+      .post('/api/auth/register/student')
       .send({ iin, fullName: '  тестов  ТЕСТ ', phone, password: 'Correct-Horse-1', locale: 'kk' })
       .expect(202);
     const otpId = (started.body as { otpId: string }).otpId;
 
     const finished = await request(app.getHttpServer())
-      .post('/auth/verify-otp')
+      .post('/api/auth/verify-otp')
       .send({ otpId, code: sms.codeFor(otpId) })
       .expect(201);
 
@@ -105,13 +107,13 @@ describe('Student registration (e2e)', () => {
     const phone = syntheticPhone();
 
     const started = await request(app.getHttpServer())
-      .post('/auth/register/student')
+      .post('/api/auth/register/student')
       .send({ iin, fullName: 'Жаңа Оқушы', phone, password: 'Correct-Horse-1' })
       .expect(202);
     const otpId = (started.body as { otpId: string }).otpId;
 
     const finished = await request(app.getHttpServer())
-      .post('/auth/verify-otp')
+      .post('/api/auth/verify-otp')
       .send({ otpId, code: sms.codeFor(otpId) })
       .expect(201);
     const body = finished.body as { studentId: string; guardianConsentRequired: boolean };
@@ -124,7 +126,7 @@ describe('Student registration (e2e)', () => {
     );
     expect(session).toMatch(/HttpOnly/i);
     const me = await request(app.getHttpServer())
-      .get('/auth/me')
+      .get('/api/auth/me')
       .set('Cookie', (session ?? '').split(';')[0])
       .expect(200);
     expect(me.body).toMatchObject({ role: 'student', studentId: body.studentId, organization: null });
@@ -133,7 +135,7 @@ describe('Student registration (e2e)', () => {
 
     // The new student can also sign in with phone + password.
     await request(app.getHttpServer())
-      .post('/auth/login')
+      .post('/api/auth/login')
       .send({ phone, password: 'Correct-Horse-1' })
       .expect(200, { userId: (me.body as { userId: string }).userId, role: 'student' });
 
@@ -147,7 +149,7 @@ describe('Student registration (e2e)', () => {
     const iin = syntheticIin('060510');
     const wrong = `${iin.slice(0, 11)}${(Number(iin[11]) + 1) % 10}`;
     const response = await request(app.getHttpServer())
-      .post('/auth/register/student')
+      .post('/api/auth/register/student')
       .send({
         iin: wrong,
         fullName: 'Тестов Тест',

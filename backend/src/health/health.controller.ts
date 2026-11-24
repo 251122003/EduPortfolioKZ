@@ -6,7 +6,7 @@ export interface HealthStatus {
   database: 'up';
 }
 
-// GET /health: answers 200 when the API and the database both work, 503 otherwise.
+// GET /api/health: answers 200 when the API and the database both work, 503 otherwise.
 // Used to check a deployment and by uptime monitors.
 @Controller('health')
 export class HealthController {

@@ -14,6 +14,37 @@ describe('createSmsSender', () => {
     );
   });
 
+  it('refuses the mock in production unless the flag is exactly "true"', () => {
+    for (const flag of ['false', '', '1', 'TRUE']) {
+      expect(() =>
+        createSmsSender({
+          SMS_PROVIDER: 'mock',
+          NODE_ENV: 'production',
+          SMS_MOCK_ALLOWED_IN_PRODUCTION: flag,
+        }),
+      ).toThrow(/production/);
+    }
+  });
+
+  it('allows the mock in production for a demo and warns about it', () => {
+    const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    const sender = createSmsSender({
+      SMS_PROVIDER: 'mock',
+      NODE_ENV: 'production',
+      SMS_MOCK_ALLOWED_IN_PRODUCTION: 'true',
+    });
+    expect(sender).toBeInstanceOf(DevSmsSender);
+    expect(warn).toHaveBeenCalledWith(expect.stringMatching(/demo only/));
+    warn.mockRestore();
+  });
+
+  it('does not warn outside production', () => {
+    const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    createSmsSender({ SMS_PROVIDER: 'mock', SMS_MOCK_ALLOWED_IN_PRODUCTION: 'true' });
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
   it('refuses a provider that does not exist yet', () => {
     expect(() => createSmsSender({ SMS_PROVIDER: 'twilio' })).toThrow(/not supported/);
   });

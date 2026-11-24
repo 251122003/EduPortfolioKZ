@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { AppModule } from '../src/app.module.js';
+import { configureApp } from '../src/app.setup.js';
 
 // End-to-end test of sign-in (FR-25) against the real local database from backend/.env.
 // Needs the demo data: run `npx prisma db seed` once before this test.
@@ -25,6 +26,7 @@ describe('Sign-in and session (e2e)', () => {
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication();
+    configureApp(app);
     await app.init();
   });
 
@@ -32,9 +34,9 @@ describe('Sign-in and session (e2e)', () => {
     await app.close();
   });
 
-  it('signs the seed organization in, shows /auth/me and signs out', async () => {
+  it('signs the seed organization in, shows /api/auth/me and signs out', async () => {
     const login = await request(app.getHttpServer())
-      .post('/auth/login')
+      .post('/api/auth/login')
       .send({ login: ORG_LOGIN, password: SEED_PASSWORD })
       .expect(200);
     expect(login.body).toEqual({ userId: expect.any(String), role: 'organization' });
@@ -46,7 +48,7 @@ describe('Sign-in and session (e2e)', () => {
     expect(cookie).not.toMatch(/Secure/i); // only in production
 
     const me = await request(app.getHttpServer())
-      .get('/auth/me')
+      .get('/api/auth/me')
       .set('Cookie', cookie.split(';')[0])
       .expect(200);
     expect(me.body).toEqual({
@@ -58,7 +60,7 @@ describe('Sign-in and session (e2e)', () => {
     });
 
     const logout = await request(app.getHttpServer())
-      .post('/auth/logout')
+      .post('/api/auth/logout')
       .set('Cookie', cookie.split(';')[0])
       .expect(204);
     const cleared = sessionCookie(logout);
@@ -66,15 +68,15 @@ describe('Sign-in and session (e2e)', () => {
     expect(cleared).toMatch(/Expires=Thu, 01 Jan 1970/);
 
     // After logout the browser has no cookie any more.
-    await request(app.getHttpServer()).get('/auth/me').expect(401);
+    await request(app.getHttpServer()).get('/api/auth/me').expect(401);
   });
 
-  it('answers 401 UNAUTHORIZED on /auth/me without a cookie or with a forged one', async () => {
-    const missing = await request(app.getHttpServer()).get('/auth/me').expect(401);
+  it('answers 401 UNAUTHORIZED on /api/auth/me without a cookie or with a forged one', async () => {
+    const missing = await request(app.getHttpServer()).get('/api/auth/me').expect(401);
     expect(missing.body).toEqual({ error: { code: 'UNAUTHORIZED', message: 'Sign in required' } });
 
     await request(app.getHttpServer())
-      .get('/auth/me')
+      .get('/api/auth/me')
       .set('Cookie', 'session=eyJhbGciOiJub25lIn0.eyJzdWIiOiJ4Iiwicm9sZSI6ImFkbWluIn0.')
       .expect(401);
   });
@@ -85,20 +87,20 @@ describe('Sign-in and session (e2e)', () => {
     };
 
     const wrongPassword = await request(app.getHttpServer())
-      .post('/auth/login')
+      .post('/api/auth/login')
       .send({ login: ORG_LOGIN, password: 'Wrong-Password-1' })
       .expect(401);
     expect(wrongPassword.body).toEqual(expected);
     expect(wrongPassword.headers['set-cookie']).toBeUndefined();
 
     const unknown = await request(app.getHttpServer())
-      .post('/auth/login')
+      .post('/api/auth/login')
       .send({ login: 'nobody@eduportfolio.test', password: SEED_PASSWORD })
       .expect(401);
     expect(unknown.body).toEqual(expected);
 
     const unknownPhone = await request(app.getHttpServer())
-      .post('/auth/login')
+      .post('/api/auth/login')
       .send({ phone: '+7 709 999 99 99', password: SEED_PASSWORD })
       .expect(401);
     expect(unknownPhone.body).toEqual(expected);
@@ -106,7 +108,7 @@ describe('Sign-in and session (e2e)', () => {
 
   it('answers 422 for a body that is neither phone nor email', async () => {
     const response = await request(app.getHttpServer())
-      .post('/auth/login')
+      .post('/api/auth/login')
       .send({ password: 'x' })
       .expect(422);
     expect((response.body as { error: { code: string } }).error.code).toBe('VALIDATION_ERROR');

@@ -101,6 +101,8 @@ LLM_API_KEY=
 LLM_MODEL=
 ```
 
+Deployment to Render (Docker, single origin), production variables and seeding the Render database: see [docs/deployment.md](docs/deployment.md).
+
 ## 6. Git workflow
 
 - `main` is always working. Larger changes go through branches and pull requests.

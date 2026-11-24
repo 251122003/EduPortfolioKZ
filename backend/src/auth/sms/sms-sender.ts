@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { DevSmsSender } from './dev-sms-sender.js';
 
 export interface OtpSms {
@@ -17,7 +18,8 @@ export const SMS_SENDER = Symbol('SMS_SENDER');
 
 /**
  * Picks the sender from SMS_PROVIDER. Only "mock" exists for now.
- * The mock never runs in production: the app refuses to start instead.
+ * In production the mock is refused (the app does not start), unless
+ * SMS_MOCK_ALLOWED_IN_PRODUCTION=true is set for the course demo; then a warning is logged.
  */
 export function createSmsSender(env: NodeJS.ProcessEnv = process.env): SmsSender {
   const provider = env.SMS_PROVIDER ?? 'mock';
@@ -25,7 +27,14 @@ export function createSmsSender(env: NodeJS.ProcessEnv = process.env): SmsSender
     throw new Error(`SMS_PROVIDER "${provider}" is not supported yet`);
   }
   if (env.NODE_ENV === 'production') {
-    throw new Error('SMS_PROVIDER=mock must not be used in production');
+    if (env.SMS_MOCK_ALLOWED_IN_PRODUCTION !== 'true') {
+      throw new Error(
+        'SMS_PROVIDER=mock must not be used in production (set SMS_MOCK_ALLOWED_IN_PRODUCTION=true only for a demo)',
+      );
+    }
+    new Logger('SmsSender').warn(
+      'SMS mock is enabled in production: demo only, no SMS is sent and codes go to the server log',
+    );
   }
   return new DevSmsSender();
 }

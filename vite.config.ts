@@ -3,8 +3,9 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
-// API calls go to /api/* on the same origin (so the SameSite=Strict session cookie works)
-// and the dev proxy forwards them to the NestJS server without the /api prefix.
+// API calls go to /api/* on the same origin (so the SameSite=Strict session cookie works).
+// The NestJS server itself serves the API under /api (backend/src/app.setup.ts), so the dev proxy
+// forwards paths unchanged; in production the same server also serves this build (single origin).
 // The prefix keeps SPA routes like /me and /v/:token from clashing with server paths.
 export default defineConfig({
   plugins: [react(), tailwindcss()],
@@ -13,7 +14,6 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },
   },

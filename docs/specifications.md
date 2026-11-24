@@ -249,14 +249,14 @@ Priority: **Must** = needed for the MVP demo; **Should** = planned for the MVP, 
 
 | ID | Area | Requirement (measurable) | How it is checked |
 |---|---|---|---|
-| NFR-1 | Performance | The API shall answer profile, verification and award-creation requests in under **1.5 s at the 95th percentile** with **50 concurrent users**; `GET /health` in under **200 ms**. | Load test (autocannon) before release |
+| NFR-1 | Performance | The API shall answer profile, verification and award-creation requests in under **1.5 s at the 95th percentile** with **50 concurrent users**; `GET /api/health` in under **200 ms**. | Load test (autocannon) before release |
 | NFR-2 | Responsive UI | The UI shall be usable from **360 px** width; layouts checked at 375, 768 and 1280 px. | Manual check, screenshots in PR |
 | NFR-3 | Type safety | All code shall compile with TypeScript `strict: true` and **zero** explicit `any` (lint rule `no-explicit-any` = error); every request body, query and path parameter shall be validated with Zod at the API boundary. | `tsc` and `oxlint` in CI |
 | NFR-4 | Testing | Each app shall keep at least **80% statement coverage**. | Coverage threshold fails CI |
 | NFR-5 | Security | Traffic shall use **HTTPS only**; passwords shall be hashed with **argon2**; IIN and phone shall be stored with **AES-256-GCM** and searched by **HMAC-SHA256**; IIN and phone shall never appear in logs, URLs, public pages or audit entries; JWT shall be kept in an `httpOnly`, `Secure`, `SameSite=Strict` cookie. | Unit tests (`identity-crypto.spec.ts`), code review, log checks |
 | NFR-6 | Privacy | The system shall comply with the Law of the Republic of Kazakhstan "On personal data and their protection": collect only listed fields, require guardian consent under 18, and keep data inside the country for production. | Review before pilot |
 | NFR-7 | Anti-abuse | OTP codes shall expire after **5 min** and lock after **5** wrong attempts for **15 min**; at most **one SMS per phone per 60 s** and **3 SMS per phone per hour**; login and public verification shall be limited to **10 requests per minute per IP** (then 429). | Automated tests |
-| NFR-8 | Availability | The production service shall be available **99% per month** (≤ 7.3 h downtime); the database shall be backed up **daily** with a restore tested before release (RPO ≤ 24 h, RTO ≤ 4 h). | Uptime monitor on `/health`, restore test |
+| NFR-8 | Availability | The production service shall be available **99% per month** (≤ 7.3 h downtime); the database shall be backed up **daily** with a restore tested before release (RPO ≤ 24 h, RTO ≤ 4 h). | Uptime monitor on `/api/health`, restore test |
 | NFR-9 | Scalability | The API shall be stateless; lookups shall use indexes on `iin_hash`, `phone_hash`, `token_hash`; the AI worker shall scale separately from the API. | Query plans reviewed |
 | NFR-10 | Localization | All user-facing text shall go through i18n with `kk` and `ru` keys. | Missing-key check in CI |
 | NFR-11 | Runtime | Both apps shall use ES Modules on Node.js 24 LTS: React 19 + Vite + Zustand on the client, NestJS 12 + Prisma 7 + PostgreSQL 18 on the server. | `package.json` `"type": "module"` |
@@ -356,7 +356,7 @@ The backend follows a layered structure: **controller** (HTTP, validation) → *
 | `/v/:token` | Public verification | Public |
 | any other | 404 | Public |
 
-The browser calls the API only under the **`/api`** prefix on its own origin (for example `/api/auth/me`). The Vite dev proxy strips the prefix and forwards to the server on `http://localhost:3000`, so the `SameSite=Strict` session cookie works and SPA paths such as `/me` and `/v/:token` do not clash with server paths of the same name. Production must route `/api/*` the same way. API payload types live in `backend/src/auth/auth.types.ts` and are shared by both sides.
+The browser calls the API only under the **`/api`** prefix on its own origin (for example `/api/auth/me`). The NestJS server itself puts every route under `/api` (`setGlobalPrefix` in `backend/src/app.setup.ts`, also used by the e2e tests). In development the Vite proxy forwards `/api/*` unchanged to `http://localhost:3000`. In production one server is the single origin: it serves the API under `/api`, the built frontend from `dist/` as static files, and `index.html` for any other `GET` path, so React Router opens `/me`, `/login` and `/v/:token` after a reload; an unknown `/api/...` path still gets the JSON 404. The `SameSite=Strict` session cookie works in both cases. Deployment steps: [deployment.md](deployment.md). API payload types live in `backend/src/auth/auth.types.ts` and are shared by both sides.
 
 **Registration and sign-in pages (UC-1, FR-25).**
 - `/register` has fields IIN, last name, first name, middle name (optional), phone, password and a required checkbox "consent to personal data processing". The client joins the names into `fullName` = "Last First Middle" (the middle name only when given). The consent checkbox is checked only in the browser and is not sent to the server. The client checks format only (IIN is 12 digits, phone has 10 or 11 digits, password at least 8 characters); the IIN checksum and phone rules are checked by the server (422).
@@ -366,6 +366,8 @@ The browser calls the API only under the **`/api`** prefix on its own origin (fo
 - Error texts are chosen by `error.code` from `src/i18n/ru.ts`; the server `message` is never shown. Submit buttons are disabled while a request runs.
 
 ## 11. API overview (REST)
+
+The server serves every path below under the global prefix **`/api`** (for example `GET /api/health`, `POST /api/auth/login`); the table omits it.
 
 | Method | Path | Description | Success | Main errors |
 |---|---|---|---|---|
@@ -419,7 +421,7 @@ Registration codes (UC-1):
 | 423 | `OTP_LOCKED` | 5 wrong attempts; a new code for this phone is refused for 15 minutes (429) |
 | 429 | `TOO_MANY_REQUESTS` | Less than 60 s since the last code, 3 codes in the last hour, or the phone is locked |
 
-An IIN or phone that already has an account gets the same 202 as a new one, with a random `otpId` and no SMS (UC-1 A2); `resend-otp` answers the same way for an unknown or used `otpId`. In development `SMS_PROVIDER=mock` sends nothing and writes only `otpId` and the code to the server console, never the phone; the app refuses to start with the mock when `NODE_ENV=production`.
+An IIN or phone that already has an account gets the same 202 as a new one, with a random `otpId` and no SMS (UC-1 A2); `resend-otp` answers the same way for an unknown or used `otpId`. In development `SMS_PROVIDER=mock` sends nothing and writes only `otpId` and the code to the server console, never the phone; the app refuses to start with the mock when `NODE_ENV=production`, unless `SMS_MOCK_ALLOWED_IN_PRODUCTION=true` is set (exactly `true`). That flag exists only for the course demo on Render: the app starts, logs a warning, and codes still go to the server log with `otpId` only, never the phone or IIN.
 
 **Sessions (FR-25).** A successful login or `verify-otp` sets the cookie `session`: a JWT (HS256, claims `sub` = user id and `role`, nothing personal) valid for **8 hours**, `httpOnly`, `SameSite=Strict`, `Path=/`, `Secure` when `NODE_ENV=production`. There is no refresh token; after 8 hours the user logs in again. Tokens signed with any algorithm other than HS256 are rejected. The secret is `JWT_SECRET` in `backend/.env` (at least 32 characters); the app refuses to start without it. Protected routes use `SessionGuard` (401 `UNAUTHORIZED` without a valid cookie) and, for role checks, `RolesGuard` with `@Roles('student' | 'organization' | 'admin')` (403 `FORBIDDEN`). Staff of an organization in any status can log in; `/auth/me` shows the status, and FR-2 limits are enforced by the event and award endpoints. Login rate limits (NFR-7) come with BE-15.
 
